@@ -122,6 +122,7 @@ function Home() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [latestDiagnosis, setLatestDiagnosis] = useState<DiagnosisResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sessionLoading, setSessionLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -169,12 +170,17 @@ function Home() {
 
   useEffect(() => {
     if (!ready || !token) return;
-    void refreshDashboard(token).catch((err: unknown) => {
-      setError((err as Error).message || "Could not load dashboard.");
-      setToken("");
-      setDashboard(null);
-      globalThis.localStorage?.removeItem(TOKEN_KEY);
-    });
+    setSessionLoading(true);
+    void refreshDashboard(token)
+      .catch((err: unknown) => {
+        setError((err as Error).message || "Could not load dashboard.");
+        setToken("");
+        setDashboard(null);
+        globalThis.localStorage?.removeItem(TOKEN_KEY);
+      })
+      .finally(() => {
+        setSessionLoading(false);
+      });
   }, [ready, token, refreshDashboard]);
 
   useEffect(() => {
@@ -195,21 +201,22 @@ function Home() {
     async (mode: "login" | "signup") => {
       clearMessages();
       setBusy(true);
+      setSessionLoading(true);
       try {
         const action = mode === "login" ? loginFn : signUpFn;
         const response = await action({ data: { email, password } });
         setToken(response.token);
         globalThis.localStorage?.setItem(TOKEN_KEY, response.token);
         setPassword("");
-        await refreshDashboard(response.token);
         setNotice(mode === "login" ? "Logged in." : "Account created and logged in.");
       } catch (err: unknown) {
         setError((err as Error).message || "Authentication failed.");
+        setSessionLoading(false);
       } finally {
         setBusy(false);
       }
     },
-    [clearMessages, email, password, refreshDashboard],
+    [clearMessages, email, password],
   );
 
   const handleLogout = useCallback(async () => {
@@ -225,6 +232,7 @@ function Home() {
       setToken("");
       setDashboard(null);
       setLatestDiagnosis(null);
+      setSessionLoading(false);
       setBusy(false);
     }
   }, [clearMessages, token]);
@@ -234,8 +242,7 @@ function Home() {
     setBusy(true);
     try {
       const response = await requestResetFn({ data: { email: resetEmail } });
-      setResetToken(response.resetToken);
-      setNotice("Password reset token generated (demo mode). Use it in the form below.");
+      setNotice(response.message || "If that account exists, a reset link has been sent.");
       setAuthMode("reset");
     } catch (err: unknown) {
       setError((err as Error).message || "Unable to request password reset.");
@@ -341,9 +348,9 @@ function Home() {
       setPhotoLabel("");
       await refreshDashboard(token);
       if (response.diagnosis.entitlement === "basic") {
-        setNotice("Diagnosis complete. Free tier shows text-only guidance.");
+        setNotice("Diagnosis complete. Free tier shows text-only guidance with DIY time and difficulty.");
       } else {
-        setNotice("Diagnosis complete with manuals, tools, parts, and videos.");
+        setNotice("Diagnosis complete with time estimate, difficulty score, manuals, videos, parts, and local repair shops.");
       }
     } catch (err: unknown) {
       setError((err as Error).message || "Diagnosis failed.");
@@ -387,13 +394,24 @@ function Home() {
   return (
     <main className="mx-auto min-h-dvh max-w-6xl space-y-6 px-4 py-6 sm:px-6">
       <header className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">VINdicate</p>
-            <h1 className="text-3xl font-bold">Universal Vehicle Diagnostic MVP</h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-              Diagnose by audio, photo, or text. Get repair steps, tools, manuals, videos, parts stores, and Garage history.
+            <h1 className="mt-2 text-3xl font-bold leading-tight sm:text-4xl">
+              Hear a weird noise? We&apos;ll tell you what&apos;s wrong, how hard it is, and what to do next.
+            </h1>
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+              Diagnose any vehicle by recording audio, snapping a photo, or typing symptoms. Get instant probable causes,
+              DIY time estimates, 1-10 difficulty ratings, and next steps.
             </p>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full bg-indigo-50 px-3 py-1 font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200">
+                Works on cars, trucks, bikes, boats, RVs, and golf carts
+              </span>
+              <span className="rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">
+                VIN decoding for precision diagnostics
+              </span>
+            </div>
           </div>
           {hasSession ? (
             <button
@@ -407,6 +425,35 @@ function Home() {
         </div>
       </header>
 
+      <section className="grid gap-4 lg:grid-cols-3">
+        <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">How it works</h2>
+          <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-gray-700 dark:text-gray-200">
+            <li>Record a sound, upload a photo, or type what your vehicle is doing.</li>
+            <li>Get an instant diagnosis with confidence, DIY time estimate, and 1-10 difficulty score.</li>
+            <li>Follow step-by-step guidance or pick a nearby repair shop.</li>
+          </ol>
+        </article>
+
+        <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Pricing</h2>
+          <ul className="mt-3 space-y-2 text-sm text-gray-700 dark:text-gray-200">
+            <li><strong>Free:</strong> 3 diagnoses/month, 1 vehicle, text guidance.</li>
+            <li><strong>Pro:</strong> $9.99/month or $99/year for unlimited full reports.</li>
+            <li><strong>Pay-per-use:</strong> $4.99 for one full diagnosis.</li>
+          </ul>
+        </article>
+
+        <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Why drivers trust VINdicate</h2>
+          <ul className="mt-3 space-y-2 text-sm text-gray-700 dark:text-gray-200">
+            <li>Built for any vehicle type, not just passenger cars.</li>
+            <li>VIN-aware diagnostics for better vehicle-specific context.</li>
+            <li>Repair steps, tools, videos, manuals, parts, and local shops in one place.</li>
+          </ul>
+        </article>
+      </section>
+
       {error ? (
         <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
           {error}
@@ -418,7 +465,7 @@ function Home() {
         </div>
       ) : null}
 
-      {!hasSession || !dashboard ? (
+      {!hasSession ? (
         <section className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <h2 className="mb-3 text-xl font-semibold">Authentication</h2>
@@ -487,7 +534,7 @@ function Home() {
                   onClick={() => void handleRequestReset()}
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
                 >
-                  Generate reset token
+                  Send reset instructions
                 </button>
               </div>
             ) : null}
@@ -533,6 +580,10 @@ function Home() {
               </li>
             </ul>
           </div>
+        </section>
+      ) : sessionLoading || !dashboard ? (
+        <section className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-600 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+          Loading your Garage and diagnosis history...
         </section>
       ) : (
         <section className="space-y-6">
@@ -743,7 +794,18 @@ function Home() {
                   accept="image/*"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
-                    setPhotoLabel(file?.name ?? "");
+                    if (!file) {
+                      setPhotoLabel("");
+                      return;
+                    }
+                    if (!file.type.startsWith("image/")) {
+                      setPhotoLabel("");
+                      setError("Please upload a valid image file (JPG, PNG, WebP, etc).");
+                      event.target.value = "";
+                      return;
+                    }
+                    setError("");
+                    setPhotoLabel(file.name);
                   }}
                   className="w-full text-sm"
                 />
@@ -766,29 +828,44 @@ function Home() {
 
           <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <h3 className="text-lg font-semibold">Diagnostic History</h3>
-            <div className="mt-3 overflow-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="px-2 py-2">When</th>
-                    <th className="px-2 py-2">Vehicle</th>
-                    <th className="px-2 py-2">Symptom</th>
-                    <th className="px-2 py-2">Issue</th>
-                    <th className="px-2 py-2">Detail level</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dashboard.diagnoses.map((entry) => (
-                    <tr key={entry.id} className="border-b border-gray-100 dark:border-gray-800">
-                      <td className="px-2 py-2 align-top text-xs">{formatDateTime(entry.createdAt)}</td>
-                      <td className="px-2 py-2 align-top">{entry.vehicleLabel}</td>
-                      <td className="max-w-72 px-2 py-2 align-top">{entry.symptomText}</td>
-                      <td className="px-2 py-2 align-top">{entry.diagnosis.probableIssue}</td>
-                      <td className="px-2 py-2 align-top">{entry.diagnosis.entitlement === "full" ? "Full" : "Basic"}</td>
+            <div className="mt-3 space-y-3">
+              <div className="space-y-2 md:hidden">
+                {dashboard.diagnoses.map((entry) => (
+                  <article key={entry.id} className="rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-700">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{formatDateTime(entry.createdAt)}</p>
+                    <p className="mt-1 font-medium">{entry.vehicleLabel}</p>
+                    <p className="mt-1 text-xs"><span className="font-medium">Symptom:</span> {entry.symptomText}</p>
+                    <p className="mt-1 text-xs"><span className="font-medium">Issue:</span> {entry.diagnosis.probableIssue}</p>
+                    <p className="mt-1 text-xs"><span className="font-medium">Detail:</span> {entry.diagnosis.entitlement === "full" ? "Full" : "Basic"}</p>
+                  </article>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-[760px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="px-2 py-2">When</th>
+                      <th className="px-2 py-2">Vehicle</th>
+                      <th className="px-2 py-2">Symptom</th>
+                      <th className="px-2 py-2">Issue</th>
+                      <th className="px-2 py-2">Detail level</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {dashboard.diagnoses.map((entry) => (
+                      <tr key={entry.id} className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="px-2 py-2 align-top text-xs">{formatDateTime(entry.createdAt)}</td>
+                        <td className="px-2 py-2 align-top">{entry.vehicleLabel}</td>
+                        <td className="max-w-72 px-2 py-2 align-top">{entry.symptomText}</td>
+                        <td className="px-2 py-2 align-top">{entry.diagnosis.probableIssue}</td>
+                        <td className="px-2 py-2 align-top">{entry.diagnosis.entitlement === "full" ? "Full" : "Basic"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
               {!dashboard.diagnoses.length ? <p className="mt-2 text-sm text-gray-500">No diagnoses yet.</p> : null}
             </div>
           </section>
@@ -808,6 +885,12 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: DiagnosisResult }) {
       <p className="text-sm">
         <span className="font-medium">Confidence:</span> {(diagnosis.confidence * 100).toFixed(1)}%
       </p>
+      <p className="text-sm">
+        <span className="font-medium">DIY time estimate:</span> {diagnosis.diyTimeEstimate}
+      </p>
+      <p className="text-sm">
+        <span className="font-medium">Difficulty (1-10):</span> {String(diagnosis.difficulty)}/10
+      </p>
       <p className="mt-2 text-sm">{diagnosis.summary}</p>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
@@ -815,7 +898,7 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: DiagnosisResult }) {
         <InfoList title="Required tools" values={diagnosis.requiredTools} emptyText="Available on paid diagnosis output." />
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-3">
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
           <h4 className="font-medium">Owner's Manual Pages</h4>
           {diagnosis.manualReferences.length ? (
@@ -875,6 +958,23 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: DiagnosisResult }) {
             <p className="mt-2 text-sm text-gray-500">Upgrade or use pay-per-use for parts-store inventory estimates.</p>
           )}
         </div>
+
+        <div className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+          <h4 className="font-medium">Nearby Repair Shops</h4>
+          {diagnosis.localRepairShops.length ? (
+            <ul className="mt-2 space-y-2 text-sm">
+              {diagnosis.localRepairShops.map((shop) => (
+                <li key={`${shop.name}-${shop.address}`}>
+                  <p className="font-medium">{shop.name}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">{shop.address}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">{shop.phone}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-gray-500">Upgrade or use pay-per-use to unlock nearby repair shop listings.</p>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -901,6 +1001,7 @@ function AudioRecorder({ onLabelChange }: { onLabelChange: (label: string) => vo
   const [isRecording, setIsRecording] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [recorder, setRecorder] = useState<MediaRecorder | null>(null);
+  const [micError, setMicError] = useState("");
 
   useEffect(
     () => () => {
@@ -912,32 +1013,39 @@ function AudioRecorder({ onLabelChange }: { onLabelChange: (label: string) => vo
   );
 
   const startRecording = useCallback(async () => {
+    setMicError("");
+
     if (!globalThis.navigator?.mediaDevices) {
+      setMicError("Microphone recording is not supported in this browser.");
       return;
     }
 
-    const stream = await globalThis.navigator.mediaDevices.getUserMedia({ audio: true });
-    const mediaRecorder = new MediaRecorder(stream);
-    const chunks: BlobPart[] = [];
+    try {
+      const stream = await globalThis.navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
 
-    mediaRecorder.ondataavailable = (event: BlobEvent) => {
-      if (event.data.size > 0) {
-        chunks.push(event.data);
-      }
-    };
+      mediaRecorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
 
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
-      const nextUrl = URL.createObjectURL(blob);
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(nextUrl);
-      onLabelChange(`mic-recording-${Date.now()}.webm`);
-      stream.getTracks().forEach((track) => track.stop());
-    };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+        const nextUrl = URL.createObjectURL(blob);
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(nextUrl);
+        onLabelChange(`mic-recording-${Date.now()}.webm`);
+        stream.getTracks().forEach((track) => track.stop());
+      };
 
-    mediaRecorder.start();
-    setRecorder(mediaRecorder);
-    setIsRecording(true);
+      mediaRecorder.start();
+      setRecorder(mediaRecorder);
+      setIsRecording(true);
+    } catch {
+      setMicError("Could not start microphone recording. Check browser permissions and microphone availability.");
+    }
   }, [onLabelChange, previewUrl]);
 
   const stopRecording = useCallback(() => {
@@ -949,7 +1057,7 @@ function AudioRecorder({ onLabelChange }: { onLabelChange: (label: string) => vo
 
   return (
     <div className="space-y-2">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => void startRecording()}
@@ -966,7 +1074,13 @@ function AudioRecorder({ onLabelChange }: { onLabelChange: (label: string) => vo
         >
           Stop
         </button>
+        {isRecording ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-[11px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-200">
+            <span className="size-2 rounded-full bg-red-500" /> Recording in progress
+          </span>
+        ) : null}
       </div>
+      {micError ? <p className="text-xs text-red-600 dark:text-red-300">{micError}</p> : null}
       {previewUrl ? <audio controls src={previewUrl} className="w-full" /> : <p className="text-xs text-gray-500">No recording yet.</p>}
     </div>
   );
