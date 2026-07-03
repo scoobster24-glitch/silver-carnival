@@ -56,12 +56,15 @@ export interface PartInventoryItem {
 export interface DiagnosisResult {
   probableIssue: string;
   confidence: number;
+  diyTimeEstimate: string;
+  difficulty: number;
   summary: string;
   repairSteps: string[];
   requiredTools: string[];
   manualReferences: ManualReference[];
   videos: VideoLink[];
   parts: PartInventoryItem[];
+  localRepairShops: PartsStore[];
   entitlement: Entitlement;
 }
 
@@ -377,24 +380,30 @@ function parseDiagnosis(raw: string): DiagnosisResult {
     return {
       probableIssue: parsed.probableIssue || "Unknown",
       confidence: Number(parsed.confidence) || 0,
+      diyTimeEstimate: parsed.diyTimeEstimate || "Unknown",
+      difficulty: Math.max(1, Math.min(10, Number(parsed.difficulty) || 5)),
       summary: parsed.summary || "",
       repairSteps: Array.isArray(parsed.repairSteps) ? parsed.repairSteps : [],
       requiredTools: Array.isArray(parsed.requiredTools) ? parsed.requiredTools : [],
       manualReferences: Array.isArray(parsed.manualReferences) ? parsed.manualReferences : [],
       videos: Array.isArray(parsed.videos) ? parsed.videos : [],
       parts: Array.isArray(parsed.parts) ? parsed.parts : [],
+      localRepairShops: Array.isArray(parsed.localRepairShops) ? parsed.localRepairShops : [],
       entitlement: parsed.entitlement === "full" ? "full" : "basic",
     };
   } catch {
     return {
       probableIssue: "Unknown",
       confidence: 0,
+      diyTimeEstimate: "Unknown",
+      difficulty: 5,
       summary: "Unable to parse diagnosis payload.",
       repairSteps: [],
       requiredTools: [],
       manualReferences: [],
       videos: [],
       parts: [],
+      localRepairShops: [],
       entitlement: "basic",
     };
   }
@@ -454,13 +463,13 @@ export async function logoutAccount(input: { token: string }): Promise<{ ok: tru
   return { ok: true };
 }
 
-export async function requestPasswordReset(input: { email: string }): Promise<{ resetToken: string }> {
+export async function requestPasswordReset(input: { email: string }): Promise<{ message: string }> {
   await ensureSchema();
   const email = input.email.trim().toLowerCase();
   const user = await getUserByEmail(email);
 
   if (!user) {
-    return { resetToken: "If this email exists, a reset token has been generated for demo mode." };
+    return { message: "If that account exists, a reset link has been sent." };
   }
 
   const token = randomBytes(18).toString("hex");
@@ -471,7 +480,9 @@ export async function requestPasswordReset(input: { email: string }): Promise<{ 
      VALUES (${sqlValue(token)}, ${sqlValue(user.id)}, ${sqlValue(expiresAt)}, NULL)`,
   );
 
-  return { resetToken: token };
+  console.info(`[vindicate] Password reset token generated for ${email}: ${token}`);
+
+  return { message: "If that account exists, a reset link has been sent." };
 }
 
 export async function resetPassword(input: { token: string; newPassword: string }): Promise<{ ok: true }> {
@@ -651,13 +662,34 @@ function normalizePhone(raw: string): string {
   return trimmed;
 }
 
-async function storesFromGoogle(zip: string): Promise<PartsStore[]> {
+interface BusinessLookupConfig {
+  googleQuery: string;
+  defaultName: string;
+  emptyAddress: string;
+  fallbackAddressPrefix: string;
+  overpassFilters: string[];
+}
+
+function buildOverpassQuery(ctx: StoreLookupContext, filters: string[]): string {
+  const selectors = filters
+    .map(
+      (filter) =>
+        `node(around:16000,${String(ctx.latitude)},${String(ctx.longitude)})[${filter}];\n` +
+        `  way(around:16000,${String(ctx.latitude)},${String(ctx.longitude)})[${filter}];\n` +
+        `  relation(around:16000,${String(ctx.latitude)},${String(ctx.longitude)})[${filter}];`,
+    )
+    .join("\n  ");
+
+  return `[out:json][timeout:25];(\n  ${selectors}\n);out center tags 30;`;
+}
+
+async function businessesFromGoogle(zip: string, query: string, defaultName: string): Promise<PartsStore[]> {
   const key = process.env.GOOGLE_MAPS_API_KEY?.trim();
   if (!key) return [];
 
   try {
     const searchUrl = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
-    searchUrl.searchParams.set("query", `auto parts store in ${zip}`);
+    searchUrl.searchParams.set("query", query);
     searchUrl.searchParams.set("key", key);
 
     const searchResp = await fetch(searchUrl.toString());
@@ -692,7 +724,7 @@ async function storesFromGoogle(zip: string): Promise<PartsStore[]> {
       }
 
       stores.push({
-        name: result.name ?? "Auto Parts Store",
+        name: result.name ?? defaultName,
         address: result.formatted_address ?? `Near ${zip}`,
         phone,
       });
@@ -704,15 +736,9 @@ async function storesFromGoogle(zip: string): Promise<PartsStore[]> {
   }
 }
 
-async function storesFromOverpass(zip: string): Promise<PartsStore[]> {
+async function businessesFromOverpass(zip: string, defaultName: string, overpassFilters: string[]): Promise<PartsStore[]> {
   const ctx = await locationContextFromZip(zip);
   if (!ctx) return [];
-
-  const overpassQuery = `[out:json][timeout:25];(
-  node(around:16000,${String(ctx.latitude)},${String(ctx.longitude)})["shop"="car_parts"];
-  way(around:16000,${String(ctx.latitude)},${String(ctx.longitude)})["shop"="car_parts"];
-  relation(around:16000,${String(ctx.latitude)},${String(ctx.longitude)})["shop"="car_parts"];
-);out center tags 20;`;
 
   try {
     const resp = await fetch("https://overpass-api.de/api/interpreter", {
@@ -720,7 +746,7 @@ async function storesFromOverpass(zip: string): Promise<PartsStore[]> {
       headers: {
         "Content-Type": "text/plain",
       },
-      body: overpassQuery,
+      body: buildOverpassQuery(ctx, overpassFilters),
     });
 
     if (!resp.ok) return [];
@@ -735,7 +761,7 @@ async function storesFromOverpass(zip: string): Promise<PartsStore[]> {
 
     for (const element of payload.elements ?? []) {
       const tags = element.tags ?? {};
-      const name = tags.name || "Auto Parts Store";
+      const name = tags.name || defaultName;
       const address = [tags["addr:housenumber"], tags["addr:street"], tags["addr:city"], tags["addr:state"]]
         .filter(Boolean)
         .join(" ");
@@ -756,31 +782,51 @@ async function storesFromOverpass(zip: string): Promise<PartsStore[]> {
   }
 }
 
-async function lookupPartsStores(zip: string): Promise<PartsStore[]> {
+async function lookupNearbyBusinesses(zip: string, config: BusinessLookupConfig): Promise<PartsStore[]> {
   const cleaned = zip.trim();
   if (!cleaned) {
     return [
       {
-        name: "Local Auto Parts",
-        address: "Enter a ZIP for local store results",
+        name: config.defaultName,
+        address: config.emptyAddress,
         phone: "Phone unavailable",
       },
     ];
   }
 
-  const google = await storesFromGoogle(cleaned);
+  const google = await businessesFromGoogle(cleaned, config.googleQuery, config.defaultName);
   if (google.length) return google;
 
-  const overpass = await storesFromOverpass(cleaned);
+  const overpass = await businessesFromOverpass(cleaned, config.defaultName, config.overpassFilters);
   if (overpass.length) return overpass;
 
   return [
     {
-      name: "Local Auto Parts",
-      address: `Near ZIP ${cleaned}`,
+      name: config.defaultName,
+      address: `${config.fallbackAddressPrefix} ${cleaned}`,
       phone: "Phone unavailable",
     },
   ];
+}
+
+async function lookupPartsStores(zip: string): Promise<PartsStore[]> {
+  return lookupNearbyBusinesses(zip, {
+    googleQuery: `auto parts store in ${zip}`,
+    defaultName: "Local Auto Parts",
+    emptyAddress: "Enter a ZIP for local store results",
+    fallbackAddressPrefix: "Near ZIP",
+    overpassFilters: ['"shop"="car_parts"'],
+  });
+}
+
+async function lookupRepairShops(zip: string): Promise<PartsStore[]> {
+  return lookupNearbyBusinesses(zip, {
+    googleQuery: `auto repair shop in ${zip}`,
+    defaultName: "Local Repair Shop",
+    emptyAddress: "Enter a ZIP for local repair shop results",
+    fallbackAddressPrefix: "Near ZIP",
+    overpassFilters: ['"amenity"="car_repair"', '"shop"="car_repair"', '"craft"="car_repair"'],
+  });
 }
 
 async function youtubeResults(query: string): Promise<VideoLink[]> {
@@ -831,9 +877,12 @@ interface DiagnosisTemplate {
   issue: string;
   confidence: number;
   summary: string;
+  diyTime: string;
+  difficulty: number;
   tools: string[];
   steps: string[];
   parts: string[];
+  localShops: PartsStore[];
   manualSections: Array<{ page: number; section: string }>;
 }
 
@@ -845,6 +894,8 @@ function heuristicDiagnosis(symptoms: string): DiagnosisTemplate {
       issue: "Weak battery, corroded terminals, or charging-system fault",
       confidence: 0.78,
       summary: "No-start and clicking symptoms often indicate low battery voltage or poor battery cable contact.",
+      diyTime: "45-90 minutes",
+      difficulty: 4,
       tools: ["Digital multimeter", "10mm wrench", "Battery terminal brush", "Safety gloves"],
       steps: [
         "Measure battery voltage with engine off; if below 12.4V, charge/test battery.",
@@ -853,6 +904,7 @@ function heuristicDiagnosis(symptoms: string): DiagnosisTemplate {
         "If battery tests good, test alternator output at idle and under load.",
       ],
       parts: ["12V battery", "Battery terminal cleaner", "Alternator belt"],
+      localShops: [],
       manualSections: [
         { page: 312, section: "Battery inspection" },
         { page: 318, section: "Charging system test" },
@@ -865,6 +917,8 @@ function heuristicDiagnosis(symptoms: string): DiagnosisTemplate {
       issue: "Cooling system issue (low coolant, stuck thermostat, or fan fault)",
       confidence: 0.74,
       summary: "Overheating generally traces to low coolant level, circulation restrictions, or radiator fan problems.",
+      diyTime: "2-3 hours",
+      difficulty: 6,
       tools: ["Coolant pressure tester", "Socket set", "Drain pan", "Safety glasses"],
       steps: [
         "Verify coolant level in radiator/overflow after engine cools completely.",
@@ -873,6 +927,7 @@ function heuristicDiagnosis(symptoms: string): DiagnosisTemplate {
         "Refill with manufacturer-specified coolant and bleed air pockets.",
       ],
       parts: ["Thermostat", "Coolant", "Upper radiator hose"],
+      localShops: [],
       manualSections: [
         { page: 226, section: "Cooling system diagram" },
         { page: 229, section: "Thermostat replacement" },
@@ -885,6 +940,8 @@ function heuristicDiagnosis(symptoms: string): DiagnosisTemplate {
       issue: "Worn brake pads or rotor surface damage",
       confidence: 0.8,
       summary: "Squealing or grinding while braking usually means friction material is near or below minimum thickness.",
+      diyTime: "1-2 hours",
+      difficulty: 5,
       tools: ["Floor jack", "Jack stands", "Lug wrench", "C-clamp", "Torque wrench"],
       steps: [
         "Lift vehicle safely and remove wheel on noisy corner.",
@@ -893,6 +950,7 @@ function heuristicDiagnosis(symptoms: string): DiagnosisTemplate {
         "Torque wheel lugs to spec and bed in new pads with gentle stops.",
       ],
       parts: ["Brake pad set", "Brake rotor", "Brake cleaner"],
+      localShops: [],
       manualSections: [
         { page: 404, section: "Front brake inspection" },
         { page: 410, section: "Pad replacement" },
@@ -905,6 +963,8 @@ function heuristicDiagnosis(symptoms: string): DiagnosisTemplate {
       issue: "Ignition or air-fuel imbalance causing misfire",
       confidence: 0.69,
       summary: "Rough idle often comes from worn spark plugs, vacuum leaks, or dirty throttle/intake components.",
+      diyTime: "60-120 minutes",
+      difficulty: 4,
       tools: ["OBD-II scanner", "Spark plug socket", "Torque wrench", "Vacuum gauge"],
       steps: [
         "Scan for active/stored diagnostic trouble codes.",
@@ -913,6 +973,7 @@ function heuristicDiagnosis(symptoms: string): DiagnosisTemplate {
         "Clear codes and verify idle stability in a test run.",
       ],
       parts: ["Spark plugs", "Ignition coil", "Air filter"],
+      localShops: [],
       manualSections: [
         { page: 145, section: "Engine misfire diagnosis" },
         { page: 152, section: "Spark plug service" },
@@ -924,6 +985,8 @@ function heuristicDiagnosis(symptoms: string): DiagnosisTemplate {
     issue: "General drivability issue requiring baseline inspection",
     confidence: 0.55,
     summary: "Symptoms are broad. Start with fluid levels, scan codes, and visible wear checks.",
+    diyTime: "1-3 hours",
+    difficulty: 5,
     tools: ["OBD-II scanner", "Flashlight", "Basic socket set", "Multimeter"],
     steps: [
       "Run a complete OBD-II scan and note any fault codes.",
@@ -932,6 +995,7 @@ function heuristicDiagnosis(symptoms: string): DiagnosisTemplate {
       "Perform component tests relevant to any discovered codes.",
     ],
     parts: ["Engine oil", "Air filter", "Fuses"],
+    localShops: [],
     manualSections: [
       { page: 98, section: "Troubleshooting basics" },
       { page: 104, section: "Diagnostic flowchart" },
@@ -943,6 +1007,8 @@ interface LlmDiagnosis {
   issue: string;
   confidence: number;
   summary: string;
+  diyTime: string;
+  difficulty: number;
   tools: string[];
   steps: string[];
   parts: string[];
@@ -961,7 +1027,7 @@ async function llmDiagnosis(input: {
 
   const prompt = [
     "You are an automotive diagnostics assistant.",
-    "Return strict JSON with keys: issue, confidence (0-1), summary, tools (array), steps (array), parts (array).",
+    "Return strict JSON with keys: issue, confidence (0-1), summary, diyTime (string), difficulty (1-10), tools (array), steps (array), parts (array).",
     `Vehicle: ${input.vehicleLabel}`,
     `Symptoms: ${input.symptomText}`,
     `Audio hint: ${input.audioLabel || "none"}`,
@@ -1005,6 +1071,8 @@ async function llmDiagnosis(input: {
       issue: parsed.issue,
       confidence: Number(parsed.confidence) > 0 ? Number(parsed.confidence) : 0.6,
       summary: parsed.summary || "AI-generated analysis.",
+      diyTime: parsed.diyTime ? String(parsed.diyTime) : "1-2 hours",
+      difficulty: Math.max(1, Math.min(10, Number(parsed.difficulty) || 5)),
       tools: parsed.tools.map((item) => String(item)),
       steps: parsed.steps.map((item) => String(item)),
       parts: parsed.parts.map((item) => String(item)),
@@ -1045,6 +1113,8 @@ async function buildDiagnosisResult(input: {
   const issue = ai?.issue ?? fallback.issue;
   const confidence = Math.max(0.05, Math.min(0.99, ai?.confidence ?? fallback.confidence));
   const summary = ai?.summary ?? fallback.summary;
+  const diyTimeEstimate = ai?.diyTime ?? fallback.diyTime;
+  const difficulty = Math.max(1, Math.min(10, ai?.difficulty ?? fallback.difficulty));
   const tools = ai?.tools?.length ? ai.tools : fallback.tools;
   const steps = ai?.steps?.length ? ai.steps : fallback.steps;
   const partsList = ai?.parts?.length ? ai.parts : fallback.parts;
@@ -1058,6 +1128,7 @@ async function buildDiagnosisResult(input: {
 
   const videos = await youtubeResults(`${labelForVehicle(input.vehicle)} ${issue}`);
   const stores = await lookupPartsStores(input.zipCode);
+  const repairShops = await lookupRepairShops(input.zipCode);
 
   const parts: PartInventoryItem[] = partsList.map((part) => ({
     part,
@@ -1069,12 +1140,15 @@ async function buildDiagnosisResult(input: {
     return {
       probableIssue: issue,
       confidence,
+      diyTimeEstimate,
+      difficulty,
       summary,
       repairSteps: steps,
       requiredTools: [],
       manualReferences: [],
       videos: [],
       parts: [],
+      localRepairShops: [],
       entitlement: "basic",
     };
   }
@@ -1082,12 +1156,15 @@ async function buildDiagnosisResult(input: {
   return {
     probableIssue: issue,
     confidence,
+    diyTimeEstimate,
+    difficulty,
     summary,
     repairSteps: steps,
     requiredTools: tools,
     manualReferences: references,
     videos,
     parts,
+    localRepairShops: repairShops.length ? repairShops : fallback.localShops,
     entitlement: "full",
   };
 }
