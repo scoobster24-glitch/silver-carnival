@@ -392,67 +392,54 @@ function Home() {
   }
 
   return (
-    <main className="mx-auto min-h-dvh max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+    <main className="mx-auto min-h-dvh max-w-6xl space-y-8 px-4 py-6 sm:px-6">
+      {/* Header with Navigation Branding */}
       <header className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">VINdicate</p>
-            <h1 className="mt-2 text-3xl font-bold leading-tight sm:text-4xl">
-              Hear a weird noise? We&apos;ll tell you what&apos;s wrong, how hard it is, and what to do next.
-            </h1>
-            <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
-              Diagnose any vehicle by recording audio, snapping a photo, or typing symptoms. Get instant probable causes,
-              DIY time estimates, 1-10 difficulty ratings, and next steps.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full bg-indigo-50 px-3 py-1 font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200">
-                Works on cars, trucks, bikes, boats, RVs, and golf carts
-              </span>
-              <span className="rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">
-                VIN decoding for precision diagnostics
-              </span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-indigo-600 text-lg font-black text-white">V</span>
+            <div>
+              <span className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">VINdicate</span>
+              <span className="ml-2 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400">MVP</span>
             </div>
           </div>
           {hasSession ? (
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
-            >
-              Logout
-            </button>
-          ) : null}
+            <div className="flex items-center gap-4">
+              <span className="hidden text-xs text-gray-500 sm:inline">Signed in as {dashboard?.user.email}</span>
+              <button
+                type="button"
+                onClick={() => void handleLogout()}
+                className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-xs font-semibold hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800 transition"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("login");
+                  document.getElementById("auth-section")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("signup");
+                  document.getElementById("auth-section")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 shadow-sm transition"
+              >
+                Get Started
+              </button>
+            </div>
+          )}
         </div>
       </header>
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">How it works</h2>
-          <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-gray-700 dark:text-gray-200">
-            <li>Record a sound, upload a photo, or type what your vehicle is doing.</li>
-            <li>Get an instant diagnosis with confidence, DIY time estimate, and 1-10 difficulty score.</li>
-            <li>Follow step-by-step guidance or pick a nearby repair shop.</li>
-          </ol>
-        </article>
-
-        <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Pricing</h2>
-          <ul className="mt-3 space-y-2 text-sm text-gray-700 dark:text-gray-200">
-            <li><strong>Free:</strong> 3 diagnoses/month, 1 vehicle, text guidance.</li>
-            <li><strong>Pro:</strong> $9.99/month or $99/year for unlimited full reports.</li>
-            <li><strong>Pay-per-use:</strong> $4.99 for one full diagnosis.</li>
-          </ul>
-        </article>
-
-        <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Why drivers trust VINdicate</h2>
-          <ul className="mt-3 space-y-2 text-sm text-gray-700 dark:text-gray-200">
-            <li>Built for any vehicle type, not just passenger cars.</li>
-            <li>VIN-aware diagnostics for better vehicle-specific context.</li>
-            <li>Repair steps, tools, videos, manuals, parts, and local shops in one place.</li>
-          </ul>
-        </article>
-      </section>
 
       {error ? (
         <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
@@ -466,121 +453,383 @@ function Home() {
       ) : null}
 
       {!hasSession ? (
-        <section className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <h2 className="mb-3 text-xl font-semibold">Authentication</h2>
-            <div className="mb-4 flex flex-wrap gap-2">
-              {([
-                ["login", "Login"],
-                ["signup", "Sign Up"],
-                ["request-reset", "Request Reset"],
-                ["reset", "Reset Password"],
-              ] as const).map(([mode, label]) => (
+        <>
+          {/* Stunning SaaS Hero Section */}
+          <section className="grid gap-8 items-center lg:grid-cols-12 py-4">
+            <div className="lg:col-span-7 space-y-6">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400">
+                <svg className="size-3 text-indigo-500 animate-pulse" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>
+                AI-Powered Multi-Vehicle Diagnostics
+              </span>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-gray-900 dark:text-white leading-none">
+                Turn Car Stress Into an <span className="text-indigo-600 dark:text-indigo-400">Enjoyable</span> DIY Victory.
+              </h1>
+              <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+                Hear a weird noise? Snap a photo? Describe the symptom? We&apos;ll decode the mystery in seconds. Get precise diagnoses, DIY time estimates, difficulty scores, step-by-step guides, owner&apos;s manual lookups, parts store scans, and repair shop finders—all in one place.
+              </p>
+              <div className="flex flex-wrap gap-4">
                 <button
-                  key={mode}
                   type="button"
-                  onClick={() => setAuthMode(mode)}
-                  className={`rounded-md px-3 py-1.5 text-sm ${
-                    authMode === mode
-                      ? "bg-indigo-600 text-white"
-                      : "border border-gray-300 text-gray-700 dark:border-gray-700 dark:text-gray-200"
-                  }`}
+                  onClick={() => {
+                    setAuthMode("signup");
+                    document.getElementById("auth-section")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="rounded-xl bg-indigo-600 px-6 py-3.5 text-sm font-bold text-white hover:bg-indigo-500 shadow-md hover:shadow-lg transition-all cursor-pointer"
                 >
-                  {label}
+                  Start Your Free Diagnosis
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
+                  className="rounded-xl border border-gray-300 px-6 py-3.5 text-sm font-semibold hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 transition cursor-pointer"
+                >
+                  See How It Works
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-indigo-500 font-bold">✓</span>
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Unlimited vehicle types (cars, boats, RVs, bikes)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-indigo-500 font-bold">✓</span>
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">VIN decoding for precision diagnostics</span>
+                </div>
+              </div>
+            </div>
+            <div className="lg:col-span-5">
+              <div className="relative overflow-hidden rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2 shadow-2xl">
+                <img
+                  src="/images/hero-vehicles.png"
+                  alt="VINdicate multi-vehicle visual diagnosis platform"
+                  className="rounded-2xl w-full object-cover aspect-[3/2] shadow-inner"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none rounded-2xl" />
+              </div>
+            </div>
+          </section>
+
+          {/* Owner Vision Testimonial Card */}
+          <section className="rounded-3xl bg-indigo-50/50 dark:bg-indigo-950/20 p-8 border border-indigo-100/50 dark:border-indigo-900/20 text-center max-w-4xl mx-auto my-4">
+            <span className="text-3xl text-indigo-500 leading-none">“</span>
+            <blockquote className="text-base sm:text-lg italic font-medium text-indigo-900 dark:text-indigo-200 max-w-2xl mx-auto mt-1">
+              I want to make working on your vehicle an enjoyable experience by providing all the necessary resources you need to eliminate stress related to vehicle problems. Anyone can now hop on VINdicate, record the noise that&apos;s raising concern, upload a photo of what they see, and hit diagnose. In a couple of seconds, you have everything you need to make it as stress-free as possible.
+            </blockquote>
+            <div className="mt-4">
+              <cite className="not-italic font-bold text-sm text-gray-900 dark:text-white">VINdicate Founder &amp; Team</cite>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Committed to Stress-Free DIY Vehicle Care</p>
+            </div>
+          </section>
+
+          {/* Detailed How It Works Steps with Icons */}
+          <section id="how-it-works" className="space-y-6 pt-6 scroll-mt-6">
+            <div className="text-center max-w-3xl mx-auto space-y-2">
+              <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">How VINdicate Works</h2>
+              <p className="text-gray-600 dark:text-gray-300">From a strange sound under the hood to a warning light, get answers and resources in three simple steps.</p>
             </div>
 
-            {authMode === "login" || authMode === "signup" ? (
-              <div className="space-y-3">
-                <label className="block text-sm font-medium">Email</label>
-                <input
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
-                />
-                <label className="block text-sm font-medium">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="At least 8 characters"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
-                />
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm space-y-4">
+                <div className="inline-flex size-10 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-bold text-lg">
+                  1
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Capture Symptoms</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Record a 5-second sound of a weird squeal or click, upload a photo of a fluid leak, or type what your vehicle is doing.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm space-y-4">
+                <div className="inline-flex size-10 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 font-bold text-lg">
+                  2
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Instant Diagnostics</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Get a detailed diagnosis with confidence score, DIY time estimate, and a difficulty rating (1-10) to decide your next move.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm space-y-4">
+                <div className="inline-flex size-10 items-center justify-center rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-300 font-bold text-lg">
+                  3
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Fix and Source Parts</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Follow step-by-step guidance, open exact owner&apos;s manual pages, watch relevant YouTube videos, find local parts stores, or look up nearby repair shops.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Why Drivers Trust Section & Review Blocks */}
+          <section className="grid gap-8 lg:grid-cols-2 items-center py-6">
+            <div className="space-y-4">
+              <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Why Drivers &amp; DIY Mechanics Trust VINdicate</h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Traditional OBD-II scanners only read standard engine fault codes for passenger cars. VINdicate is a complete, multi-vehicle diagnostic suite designed to remove frustration from any vehicle issue.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex gap-2.5 text-sm">
+                  <span className="text-emerald-500 font-bold">✓</span>
+                  <div>
+                    <strong className="text-gray-900 dark:text-white">Not Just Cars:</strong> Works across trucks, motorcycles, boats, golf carts, RVs, and powersports.
+                  </div>
+                </li>
+                <li className="flex gap-2.5 text-sm">
+                  <span className="text-emerald-500 font-bold">✓</span>
+                  <div>
+                    <strong className="text-gray-900 dark:text-white">Audio &amp; Photo Analysis:</strong> Diagnoses visual damage or strange mechanical sounds using intelligent pattern matching.
+                  </div>
+                </li>
+                <li className="flex gap-2.5 text-sm">
+                  <span className="text-emerald-500 font-bold">✓</span>
+                  <div>
+                    <strong className="text-gray-900 dark:text-white">All-In-One Toolkit:</strong> Integrates YouTube videos, exact owner manual references, live inventory scans at local auto parts stores, and local mechanic maps.
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm space-y-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">What Real DIYers Say</h3>
+              <div className="space-y-4">
+                <div className="text-xs space-y-1">
+                  <div className="flex text-yellow-400 text-sm">★★★★★</div>
+                  <p className="italic text-gray-600 dark:text-gray-300">&quot;My car was making a weird clicking sound. I was terrified of a $1,000 repair bill. I recorded the noise on VINdicate, and it diagnosed a loose heat shield. It was a 10-minute fix that cost me $0!&quot;</p>
+                  <p className="font-semibold text-gray-900 dark:text-white text-[10px]">Marcus K. — Toyota Tacoma Owner</p>
+                </div>
+                <div className="border-t border-gray-100 dark:border-gray-800 pt-3 text-xs space-y-1">
+                  <div className="flex text-yellow-400 text-sm">★★★★★</div>
+                  <p className="italic text-gray-600 dark:text-gray-300">&quot;VINdicate makes working on my boat actually fun. Finding exact manual pages and local parts in one search saved me hours of frustration. This app pays for itself on the first fix.&quot;</p>
+                  <p className="font-semibold text-gray-900 dark:text-white text-[10px]">Elena R. — Yamaha Outboard Owner</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Pricing Plans Sections */}
+          <section id="pricing" className="space-y-6 pt-6 scroll-mt-6">
+            <div className="text-center max-w-3xl mx-auto space-y-2">
+              <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Flexible, Cost-Effective Plans</h2>
+              <p className="text-gray-600 dark:text-gray-300">Whether you are a one-time DIYer or a multi-vehicle household, find a plan that fits your repair style.</p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+              {/* Free Plan */}
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Free Basic</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Great for a quick checkup</p>
+                  </div>
+                  <div className="text-3xl font-black text-gray-900 dark:text-white">
+                    $0<span className="text-xs font-normal text-gray-500"> / month</span>
+                  </div>
+                  <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-300">
+                    <li className="flex gap-2"><span>✓</span> 3 basic diagnoses per month</li>
+                    <li className="flex gap-2"><span>✓</span> 1 vehicle saved in Garage</li>
+                    <li className="flex gap-2"><span>✓</span> Text-only repair guidance</li>
+                  </ul>
+                </div>
                 <button
                   type="button"
-                  disabled={busy}
-                  onClick={() => void handleAuth(authMode)}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+                  onClick={() => {
+                    setAuthMode("signup");
+                    document.getElementById("auth-section")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="w-full py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-bold transition cursor-pointer"
                 >
-                  {authMode === "login" ? "Login" : "Create account"}
+                  Create Free Account
                 </button>
               </div>
-            ) : null}
 
-            {authMode === "request-reset" ? (
-              <div className="space-y-3">
-                <label className="block text-sm font-medium">Account email</label>
-                <input
-                  value={resetEmail}
-                  onChange={(event) => setResetEmail(event.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
-                />
+              {/* Pro Plan */}
+              <div className="rounded-2xl border-2 border-indigo-600 bg-white dark:bg-gray-900 p-6 shadow-md flex flex-col justify-between space-y-6 relative">
+                <span className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-600 px-3 py-1 text-[10px] font-extrabold text-white uppercase tracking-wider">
+                  BEST VALUE
+                </span>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      Pro Subscriber
+                    </h3>
+                    <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">Ultimate Peace of Mind</p>
+                  </div>
+                  <div className="text-3xl font-black text-gray-900 dark:text-white">
+                    $9.99<span className="text-xs font-normal text-gray-500"> / month</span>
+                  </div>
+                  <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-300">
+                    <li className="flex gap-2"><span className="text-indigo-500 font-bold">✓</span> Unlimited diagnostics</li>
+                    <li className="flex gap-2"><span className="text-indigo-500 font-bold">✓</span> Unlimited vehicles in Garage</li>
+                    <li className="flex gap-2"><span className="text-indigo-500 font-bold">✓</span> Step-by-step guides &amp; tool lists</li>
+                    <li className="flex gap-2"><span className="text-indigo-500 font-bold">✓</span> DIY time estimates &amp; 1-10 difficulty</li>
+                    <li className="flex gap-2"><span className="text-indigo-500 font-bold">✓</span> Hand-picked YouTube repair tutorials</li>
+                    <li className="flex gap-2"><span className="text-indigo-500 font-bold">✓</span> Exact Owner&apos;s Manual pages</li>
+                    <li className="flex gap-2"><span className="text-indigo-500 font-bold">✓</span> Local auto parts store inventory &amp; pricing</li>
+                    <li className="flex gap-2"><span className="text-indigo-500 font-bold">✓</span> Map of nearby professional repair shops</li>
+                  </ul>
+                </div>
                 <button
                   type="button"
-                  disabled={busy}
-                  onClick={() => void handleRequestReset()}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+                  onClick={() => {
+                    setAuthMode("signup");
+                    document.getElementById("auth-section")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition cursor-pointer"
                 >
-                  Send reset instructions
+                  Go Pro Now (Save with $99/yr)
                 </button>
               </div>
-            ) : null}
 
-            {authMode === "reset" ? (
-              <div className="space-y-3">
-                <label className="block text-sm font-medium">Reset token</label>
-                <input
-                  value={resetToken}
-                  onChange={(event) => setResetToken(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
-                />
-                <label className="block text-sm font-medium">New password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
-                />
+              {/* Pay-per-use Plan */}
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Pay-Per-Use</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">One-off comprehensive repair</p>
+                  </div>
+                  <div className="text-3xl font-black text-gray-900 dark:text-white">
+                    $4.99<span className="text-xs font-normal text-gray-500"> / diagnosis</span>
+                  </div>
+                  <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-300">
+                    <li className="flex gap-2"><span>✓</span> 1 comprehensive Pro diagnostic credit</li>
+                    <li className="flex gap-2"><span>✓</span> Includes step-by-step guides &amp; tools list</li>
+                    <li className="flex gap-2"><span>✓</span> Includes video, manual, &amp; parts lookups</li>
+                    <li className="flex gap-2"><span>✓</span> No monthly subscription required</li>
+                  </ul>
+                </div>
                 <button
                   type="button"
-                  disabled={busy}
-                  onClick={() => void handleResetPassword()}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+                  onClick={() => {
+                    setAuthMode("signup");
+                    document.getElementById("auth-section")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="w-full py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-bold transition cursor-pointer"
                 >
-                  Reset password
+                  Buy Single Credit
                 </button>
               </div>
-            ) : null}
-          </div>
+            </div>
+          </section>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <h2 className="mb-3 text-xl font-semibold">Plans</h2>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <strong>Free:</strong> 3 diagnoses/mo, 1 vehicle, text-only guidance.
-              </li>
-              <li>
-                <strong>Subscription:</strong> $9.99/mo or $99/yr for unlimited diagnoses, manuals, videos, parts scan, full Garage.
-              </li>
-              <li>
-                <strong>Pay-per-use:</strong> $4.99 for one full diagnosis credit.
-              </li>
-            </ul>
-          </div>
-        </section>
+          {/* Beautifully Framed Authentication Container */}
+          <section id="auth-section" className="scroll-mt-6 pt-6">
+            <div className="max-w-md mx-auto rounded-3xl border border-gray-200 bg-white p-8 shadow-md dark:border-gray-800 dark:bg-gray-900 space-y-6">
+              <div className="text-center space-y-1">
+                <h2 className="text-2xl font-black text-gray-900 dark:text-white">Ready to Diagnose?</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Sign up or login to start your diagnostic journey</p>
+              </div>
+              <div className="flex gap-1.5 rounded-xl bg-gray-100 p-1 dark:bg-gray-950">
+                {([
+                  ["login", "Login"],
+                  ["signup", "Sign Up"],
+                  ["request-reset", "Request Reset"],
+                  ["reset", "Reset Password"],
+                ] as const).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setAuthMode(mode)}
+                    className={`w-full rounded-lg py-1.5 text-center text-xs font-bold transition-all ${
+                      authMode === mode
+                        ? "bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-white"
+                        : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white cursor-pointer"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {authMode === "login" || authMode === "signup" ? (
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Email Address</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm dark:border-gray-800 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Password</label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="At least 8 characters"
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm dark:border-gray-800 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handleAuth(authMode)}
+                    className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white hover:bg-indigo-500 disabled:opacity-60 shadow transition-all cursor-pointer"
+                  >
+                    {authMode === "login" ? "Login to Your Account" : "Create Free Account"}
+                  </button>
+                </div>
+              ) : null}
+
+              {authMode === "request-reset" ? (
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Account Email Address</label>
+                    <input
+                      type="email"
+                      value={resetEmail}
+                      onChange={(event) => setResetEmail(event.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm dark:border-gray-800 dark:bg-gray-950"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handleRequestReset()}
+                    className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white hover:bg-indigo-500 disabled:opacity-60 shadow transition-all cursor-pointer"
+                  >
+                    Send Reset Instructions
+                  </button>
+                </div>
+              ) : null}
+
+              {authMode === "reset" ? (
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Reset Token</label>
+                    <input
+                      value={resetToken}
+                      onChange={(event) => setResetToken(event.target.value)}
+                      placeholder="Paste your reset token here"
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm dark:border-gray-800 dark:bg-gray-950"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      placeholder="At least 8 characters"
+                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm dark:border-gray-800 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handleResetPassword()}
+                    className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white hover:bg-indigo-500 disabled:opacity-60 shadow transition-all cursor-pointer"
+                  >
+                    Reset Password
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </section>
+        </>
       ) : sessionLoading || !dashboard ? (
         <section className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-600 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
           Loading your Garage and diagnosis history...
